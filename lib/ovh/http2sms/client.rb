@@ -185,12 +185,20 @@ module Ovh
 
       def execute_request(query_params, content_type)
         log_request(query_params)
+        run_before_request_callbacks(query_params)
 
         response = make_http_request(query_params)
         parsed_response = parse_response(response, content_type)
 
         log_response(parsed_response)
-        handle_error_response(parsed_response) if parsed_response.failure?
+        run_after_request_callbacks(parsed_response)
+
+        if parsed_response.failure?
+          run_on_failure_callbacks(parsed_response)
+          handle_error_response(parsed_response)
+        else
+          run_on_success_callbacks(parsed_response)
+        end
 
         parsed_response
       rescue Faraday::Error => e
@@ -247,6 +255,24 @@ module Ovh
         @config.logger.debug(
           "[OVH HTTP2SMS] Response: status=#{response.status} success=#{response.success?}"
         )
+      end
+
+      def run_before_request_callbacks(params)
+        safe_params = params.dup
+        safe_params[:password] = "[FILTERED]"
+        @config.before_request_callbacks.each { |callback| callback.call(safe_params) }
+      end
+
+      def run_after_request_callbacks(response)
+        @config.after_request_callbacks.each { |callback| callback.call(response) }
+      end
+
+      def run_on_success_callbacks(response)
+        @config.on_success_callbacks.each { |callback| callback.call(response) }
+      end
+
+      def run_on_failure_callbacks(response)
+        @config.on_failure_callbacks.each { |callback| callback.call(response) }
       end
     end
   end

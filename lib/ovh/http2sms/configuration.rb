@@ -46,6 +46,18 @@ module Ovh
       # @return [String] API endpoint URL
       attr_accessor :api_endpoint
 
+      # @return [Array<Proc>] Callbacks executed before each request
+      attr_reader :before_request_callbacks
+
+      # @return [Array<Proc>] Callbacks executed after each request
+      attr_reader :after_request_callbacks
+
+      # @return [Array<Proc>] Callbacks executed on successful delivery
+      attr_reader :on_success_callbacks
+
+      # @return [Array<Proc>] Callbacks executed on failed delivery
+      attr_reader :on_failure_callbacks
+
       # Environment variable prefix
       ENV_PREFIX = "OVH_SMS_"
 
@@ -60,6 +72,15 @@ module Ovh
 
       def initialize
         reset!
+      end
+
+      # Ensure callbacks are properly duplicated
+      def initialize_dup(other)
+        super
+        @before_request_callbacks = other.before_request_callbacks.dup
+        @after_request_callbacks = other.after_request_callbacks.dup
+        @on_success_callbacks = other.on_success_callbacks.dup
+        @on_failure_callbacks = other.on_failure_callbacks.dup
       end
 
       # Reset configuration to defaults and environment variables
@@ -78,8 +99,67 @@ module Ovh
         self.default_sender = nil
         self.logger = nil
 
+        # Reset callbacks
+        @before_request_callbacks = []
+        @after_request_callbacks = []
+        @on_success_callbacks = []
+        @on_failure_callbacks = []
+
         # Load from environment variables
         load_from_env
+      end
+
+      # Register a callback to be executed before each request
+      #
+      # @yield [Hash] The request parameters (with password filtered)
+      # @return [void]
+      #
+      # @example Log all requests
+      #   config.before_request do |params|
+      #     Rails.logger.info("Sending SMS to #{params[:to]}")
+      #   end
+      def before_request(&block)
+        @before_request_callbacks << block if block_given?
+      end
+
+      # Register a callback to be executed after each request
+      #
+      # @yield [Response] The parsed response object
+      # @return [void]
+      #
+      # @example Track metrics
+      #   config.after_request do |response|
+      #     StatsD.increment("sms.sent", tags: ["status:#{response.status}"])
+      #   end
+      def after_request(&block)
+        @after_request_callbacks << block if block_given?
+      end
+
+      # Register a callback to be executed on successful delivery
+      #
+      # @yield [Response] The successful response object
+      # @return [void]
+      #
+      # @example Track success
+      #   config.on_success do |response|
+      #     StatsD.increment("sms.success")
+      #     StatsD.gauge("sms.credits", response.credits_remaining)
+      #   end
+      def on_success(&block)
+        @on_success_callbacks << block if block_given?
+      end
+
+      # Register a callback to be executed on failed delivery
+      #
+      # @yield [Response] The failed response object
+      # @return [void]
+      #
+      # @example Track failures
+      #   config.on_failure do |response|
+      #     StatsD.increment("sms.failure", tags: ["error:#{response.error_type}"])
+      #   end
+      def on_failure(&block)
+        @on_failure_callbacks << block if block_given?
       end
 
       # Check if the configuration is valid for making API requests
