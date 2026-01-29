@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-01-29
+
+### Changed
+
+- Bump `rubocop-rspec` from 2.x to 3.9
+- Bump `actions/checkout` from 4 to 6
+- Bump `codecov/codecov-action` from 4 to 5
+- Bump `softprops/action-gh-release` from 1 to 2
+- Update RuboCop config to use plugins syntax (rubocop-rspec 3.x)
+- Re-enable `RSpec/PredicateMatcher` cop (fixed in rubocop-rspec 3.x)
+
 ## [0.1.1] - 2025-01-29
 
 ### Added
@@ -67,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Faraday >= 1.0, < 3.0
 - gsm_encoder ~> 0.1.7
 
-[Unreleased]: https://github.com/fkiene/ovh-http2sms/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/fkiene/ovh-http2sms/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/fkiene/ovh-http2sms/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/fkiene/ovh-http2sms/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/fkiene/ovh-http2sms/releases/tag/v0.1.0
