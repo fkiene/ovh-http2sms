@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-01-29
+
+### Added
+
+- Request lifecycle callbacks for monitoring and metrics:
+  - `before_request`: called before each API request with filtered params
+  - `after_request`: called after each request with response
+  - `on_success`: called on successful SMS delivery
+  - `on_failure`: called on failed delivery
+- Dependabot configuration for automated dependency updates
+- Community contribution files:
+  - `CONTRIBUTING.md` with development guidelines
+  - Pull request template
+  - Issue templates for bugs and feature requests
+- `SenderNotFoundError` exception for status 241
+- `ResponseParseError` exception for malformed responses
+
+### Changed
+
+- Improved error handling with more specific exception types
+
 ## [0.1.0] - 2025-01-28
 
 ### Added
@@ -46,5 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Faraday >= 1.0, < 3.0
 - gsm_encoder ~> 0.1.7
 
-[Unreleased]: https://github.com/fkiene/ovh-http2sms/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/fkiene/ovh-http2sms/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/fkiene/ovh-http2sms/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/fkiene/ovh-http2sms/releases/tag/v0.1.0
