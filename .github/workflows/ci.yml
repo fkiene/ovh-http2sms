@@ -28,8 +28,9 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
-        if: matrix.ruby-version == '3.2'
+        if: matrix.ruby-version == '3.3'
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/.resultset.json
           fail_ci_if_error: false
 
@@ -41,7 +42,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
+          ruby-version: '3.3'
           bundler-cache: true
 
       - name: Run Rubocop
@@ -55,7 +56,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
+          ruby-version: '3.3'
           bundler-cache: true
 
       - name: Build gem
