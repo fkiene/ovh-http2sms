@@ -29,7 +29,7 @@ jobs:
         uses: rubygems/release-gem@v1
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: '*.gem'
           generate_release_notes: true
