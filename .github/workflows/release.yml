@@ -26,12 +26,7 @@ jobs:
         run: gem build ovh-http2sms.gemspec
 
       - name: Publish to RubyGems
-        run: |
-          mkdir -p ~/.gem
-          echo "---" > ~/.gem/credentials
-          echo ":rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}" >> ~/.gem/credentials
-          chmod 0600 ~/.gem/credentials
-          gem push *.gem
+        uses: rubygems/release-gem@v1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
