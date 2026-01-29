@@ -1,39 +1,503 @@
-# Ovh::Http2sms
+# OVH HTTP2SMS
 
-TODO: Delete this and the text below, and describe your gem
+[![Gem Version](https://img.shields.io/gem/v/ovh-http2sms.svg)](https://rubygems.org/gems/ovh-http2sms)
+[![Build Status](https://github.com/fkiene/ovh-http2sms/actions/workflows/ci.yml/badge.svg)](https://github.com/fkiene/ovh-http2sms/actions)
+[![Code Coverage](https://codecov.io/gh/fkiene/ovh-http2sms/branch/main/graph/badge.svg)](https://codecov.io/gh/fkiene/ovh-http2sms)
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/ovh/http2sms`. To experiment with that code, run `bin/console` for an interactive prompt.
+A production-ready Ruby gem to send SMS via OVH's http2sms API. Supports single and bulk sending, scheduled messages, GSM/Unicode encoding detection, phone number formatting, and seamless Rails integration.
+
+## Features
+
+- Simple API for sending SMS via OVH's http2sms endpoint
+- Support for single and multiple recipients
+- Scheduled (deferred) message sending
+- GSM 03.38 and Unicode encoding detection
+- Automatic phone number formatting (local to international)
+- Configurable country codes for international support
+- Commercial SMS with STOP clause handling
+- Reply-enabled SMS (senderForResponse)
+- All response formats (JSON, XML, HTML, text/plain)
+- Rails generator for easy setup
+- Rails credentials support
+- Thread-safe client
+- Comprehensive error handling
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add this line to your application's Gemfile:
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+gem "ovh-http2sms"
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+And then execute:
 
 ```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+bundle install
 ```
 
-## Usage
+Or install it yourself:
 
-TODO: Write usage instructions here
+```bash
+gem install ovh-http2sms
+```
+
+## Quick Start
+
+```ruby
+# Configure credentials
+Ovh::Http2sms.configure do |config|
+  config.account = "sms-xx11111-1"
+  config.login = "your_login"
+  config.password = "your_password"
+end
+
+# Send a simple SMS
+response = Ovh::Http2sms.deliver(to: "33601020304", message: "Hello!")
+
+if response.success?
+  puts "SMS sent! ID: #{response.sms_ids.first}"
+  puts "Credits remaining: #{response.credits_remaining}"
+else
+  puts "Error: #{response.error_message}"
+end
+```
+
+## Configuration
+
+### Block Configuration
+
+```ruby
+Ovh::Http2sms.configure do |config|
+  # Required
+  config.account = "sms-xx11111-1"
+  config.login = "your_login"
+  config.password = "your_password"
+
+  # Optional
+  config.default_sender = "MyApp"           # Default sender name
+  config.default_country_code = "33"        # For phone number formatting (default: "33" France)
+  config.default_content_type = "application/json"  # Response format
+  config.timeout = 15                       # HTTP timeout in seconds
+  config.raise_on_length_error = true       # Raise error for very long messages
+  config.logger = Logger.new($stdout)       # For debugging
+end
+```
+
+### Environment Variables
+
+```bash
+export OVH_SMS_ACCOUNT="sms-xx11111-1"
+export OVH_SMS_LOGIN="your_login"
+export OVH_SMS_PASSWORD="your_password"
+export OVH_SMS_DEFAULT_SENDER="MyApp"
+export OVH_SMS_DEFAULT_COUNTRY_CODE="33"
+export OVH_SMS_TIMEOUT="30"
+```
+
+### Rails Credentials
+
+For Rails applications, you can use encrypted credentials:
+
+```bash
+rails credentials:edit
+```
+
+Add:
+
+```yaml
+ovh_sms:
+  account: sms-xx11111-1
+  login: your_login
+  password: your_password
+  default_sender: MyApp
+```
+
+Then in your initializer:
+
+```ruby
+Ovh::Http2sms.configure do |config|
+  credentials = Rails.application.credentials.ovh_sms
+  config.account = credentials[:account]
+  config.login = credentials[:login]
+  config.password = credentials[:password]
+  config.default_sender = credentials[:default_sender]
+end
+```
+
+## Usage Examples
+
+### Basic Send
+
+```ruby
+response = Ovh::Http2sms.deliver(
+  to: "33601020304",
+  message: "Your verification code is 123456"
+)
+```
+
+### Send to Multiple Recipients
+
+```ruby
+# As array
+response = Ovh::Http2sms.deliver(
+  to: ["33601020304", "33602030405", "33603040506"],
+  message: "Team meeting at 3pm"
+)
+
+# As comma-separated string
+response = Ovh::Http2sms.deliver(
+  to: "33601020304,33602030405",
+  message: "Team meeting at 3pm"
+)
+```
+
+### Scheduled (Deferred) Sending
+
+```ruby
+# Using Ruby Time object
+response = Ovh::Http2sms.deliver(
+  to: "33601020304",
+  message: "Reminder: Meeting tomorrow",
+  deferred: Time.now + 3600  # 1 hour from now
+)
+
+# Using OVH format (hhmmddMMYYYY)
+response = Ovh::Http2sms.deliver(
+  to: "33601020304",
+  message: "Happy New Year!",
+  deferred: "000001012025"  # Midnight on Jan 1, 2025
+)
+```
+
+### Custom Sender
+
+```ruby
+response = Ovh::Http2sms.deliver(
+  to: "33601020304",
+  message: "Your order has shipped!",
+  sender: "MyShop"  # Must be registered with OVH
+)
+```
+
+### Enable Replies (Short Code)
+
+```ruby
+response = Ovh::Http2sms.deliver(
+  to: "33601020304",
+  message: "Reply YES to confirm",
+  sender_for_response: true  # Enables reply capability
+)
+```
+
+### Non-Commercial SMS (No STOP Clause)
+
+```ruby
+response = Ovh::Http2sms.deliver(
+  to: "33601020304",
+  message: "Your 2FA code is 123456",
+  no_stop: true  # Removes "STOP au XXXXX" from message
+)
+```
+
+### With Custom Tag for Tracking
+
+```ruby
+response = Ovh::Http2sms.deliver(
+  to: "33601020304",
+  message: "Order #12345 confirmed",
+  tag: "order-confirmations"  # Max 20 characters
+)
+```
+
+### Force Encoding
+
+```ruby
+# Force Unicode encoding
+response = Ovh::Http2sms.deliver(
+  to: "33601020304",
+  message: "Hello World",
+  sms_coding: 2  # 1 = GSM 7-bit, 2 = Unicode
+)
+```
+
+## Phone Number Formatting
+
+The gem automatically formats phone numbers to OVH international format (00 prefix):
+
+```ruby
+# Local French number
+Ovh::Http2sms.format_phone("0601020304")
+# => "0033601020304"
+
+# Already international
+Ovh::Http2sms.format_phone("33601020304")
+# => "0033601020304"
+
+# With plus sign
+Ovh::Http2sms.format_phone("+33601020304")
+# => "0033601020304"
+
+# With spaces and dashes
+Ovh::Http2sms.format_phone("06 01 02-03-04")
+# => "0033601020304"
+
+# Already OVH format (unchanged)
+Ovh::Http2sms.format_phone("0033601020304")
+# => "0033601020304"
+
+# UK number with custom country code
+Ovh::Http2sms.format_phone("07911123456", country_code: "44")
+# => "00447911123456"
+```
+
+## Character Encoding
+
+SMS messages use different encodings with different character limits:
+
+| Encoding | Single SMS | Concatenated SMS |
+|----------|------------|------------------|
+| GSM 7-bit | 160 chars | 153 chars/part |
+| Unicode | 70 chars | 67 chars/part |
+
+For commercial SMS (with STOP clause), limits are reduced:
+
+| Encoding | First SMS | Subsequent |
+|----------|-----------|------------|
+| GSM 7-bit | 149 chars | 153 chars |
+| Unicode | 59 chars | 70 chars |
+
+### Check Message Info
+
+```ruby
+info = Ovh::Http2sms.message_info("Hello World!")
+# => {
+#   characters: 12,
+#   encoding: :gsm,
+#   sms_count: 1,
+#   remaining: 137,
+#   max_single_sms: 149,
+#   non_gsm_chars: []
+# }
+
+# With emoji (forces Unicode)
+info = Ovh::Http2sms.message_info("Hello! 👋")
+# => {
+#   characters: 9,
+#   encoding: :unicode,
+#   sms_count: 1,
+#   remaining: 50,
+#   max_single_sms: 59,
+#   non_gsm_chars: ["👋"]
+# }
+
+# For non-commercial SMS
+info = Ovh::Http2sms.message_info("Hello!", commercial: false)
+# => { remaining: 154, max_single_sms: 160, ... }
+```
+
+### Check GSM Compatibility
+
+```ruby
+Ovh::Http2sms.gsm_compatible?("Hello World!")  # => true
+Ovh::Http2sms.gsm_compatible?("Привет мир!")   # => false
+Ovh::Http2sms.gsm_compatible?("Price: €100")   # => true (€ is GSM extension)
+```
+
+### GSM Extension Characters
+
+These characters are valid in GSM encoding but count as 2 characters:
+`€`, `|`, `^`, `{`, `}`, `[`, `]`, `~`, `\`
+
+## Error Handling
+
+```ruby
+begin
+  response = Ovh::Http2sms.deliver(to: "33601020304", message: "Hello!")
+rescue Ovh::Http2sms::ConfigurationError => e
+  puts "Missing configuration: #{e.message}"
+rescue Ovh::Http2sms::AuthenticationError => e
+  puts "IP not authorized: #{e.message}"
+rescue Ovh::Http2sms::MissingParameterError => e
+  puts "Missing parameter: #{e.message}"
+rescue Ovh::Http2sms::InvalidParameterError => e
+  puts "Invalid parameter: #{e.message}"
+rescue Ovh::Http2sms::SenderNotFoundError => e
+  puts "Sender not registered: #{e.message}"
+rescue Ovh::Http2sms::PhoneNumberError => e
+  puts "Invalid phone number: #{e.phone_number}"
+rescue Ovh::Http2sms::MessageLengthError => e
+  puts "Message too long: #{e.length} chars (#{e.encoding} encoding)"
+rescue Ovh::Http2sms::NetworkError => e
+  puts "Network error: #{e.message}"
+rescue Ovh::Http2sms::ResponseParseError => e
+  puts "Failed to parse response: #{e.message}"
+rescue Ovh::Http2sms::Error => e
+  puts "General error: #{e.message}"
+end
+```
+
+## Rails Integration
+
+### Generate Initializer
+
+```bash
+rails g ovh:http2sms:install
+```
+
+This creates `config/initializers/ovh_http2sms.rb` with configuration options.
+
+### Using with ActiveJob
+
+Parameters are serializable and work with ActiveJob:
+
+```ruby
+class SmsNotificationJob < ApplicationJob
+  queue_as :default
+
+  def perform(phone_number, message, options = {})
+    Ovh::Http2sms.deliver(
+      to: phone_number,
+      message: message,
+      **options.symbolize_keys
+    )
+  end
+end
+
+# Enqueue
+SmsNotificationJob.perform_later("0601020304", "Your order shipped!", { tag: "shipping" })
+```
+
+### Multiple Accounts
+
+Use separate clients for different OVH accounts:
+
+```ruby
+marketing_client = Ovh::Http2sms.client(
+  account: "sms-marketing-1",
+  login: "marketing_user",
+  password: "marketing_pass",
+  default_sender: "Promo"
+)
+
+transactional_client = Ovh::Http2sms.client(
+  account: "sms-transact-1",
+  login: "transact_user",
+  password: "transact_pass",
+  default_sender: "Alerts"
+)
+
+marketing_client.deliver(to: "33601020304", message: "Special offer!")
+transactional_client.deliver(to: "33601020304", message: "Order confirmed", no_stop: true)
+```
+
+## Response Object
+
+```ruby
+response = Ovh::Http2sms.deliver(to: "33601020304", message: "Hello!")
+
+response.success?          # true/false
+response.failure?          # opposite of success?
+response.status            # API status code (100, 101 = success)
+response.sms_ids           # Array of SMS IDs
+response.credits_remaining # Remaining SMS credits
+response.error_message     # Error message if failed
+response.error_type        # :missing_parameter, :invalid_parameter, :authentication_error
+response.raw_response      # Raw API response body
+response.content_type      # Response content type
+```
+
+## API Reference
+
+### OVH Response Codes
+
+| Code | Meaning |
+|------|---------|
+| 100, 101 | Success |
+| 201 | Missing parameter |
+| 202 | Invalid parameter |
+| 241 | Sender not found |
+| 401 | IP not authorized |
+
+### SMS Classes
+
+| Class | Description |
+|-------|-------------|
+| 0 | Flash SMS (displayed immediately, not stored) |
+| 1 | Stored in phone memory (default) |
+| 2 | Stored on SIM card |
+| 3 | Transferred to external device |
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+### With Docker (recommended)
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```bash
+# Interactive console
+docker compose run --rm dev
+
+# Run tests
+docker compose run --rm test
+
+# Run linter
+docker compose run --rm lint
+```
+
+To test with real credentials:
+
+```bash
+cp .env.example .env
+# Edit .env with your OVH credentials
+docker compose run --rm dev
+```
+
+### Without Docker
+
+After checking out the repo, run:
+
+```bash
+bin/setup
+bundle exec rake spec
+```
+
+To install locally:
+
+```bash
+bundle exec rake install
+```
+
+### Running Tests
+
+```bash
+bundle exec rspec
+```
+
+### Code Style
+
+```bash
+bundle exec rubocop
+```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/ovh-http2sms.
+1. Fork it
+2. Create your feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -am 'Add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Create a Pull Request
+
+Please ensure:
+- All tests pass
+- Code follows Ruby style guide (Rubocop)
+- New features have tests
+- Documentation is updated
 
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+
+## Links
+
+- [OVH SMS Documentation](https://help.ovhcloud.com/csm/fr-sms-sending-via-url-http2sms)
+- [RubyGems](https://rubygems.org/gems/ovh-http2sms)
+- [API Documentation](https://rubydoc.info/gems/ovh-http2sms)
