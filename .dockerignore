@@ -1,0 +1,9 @@
+.git
+.github
+*.gem
+coverage/
+doc/
+pkg/
+tmp/
+vendor/bundle
+.rspec_status

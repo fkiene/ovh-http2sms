@@ -1,0 +1,29 @@
+services:
+  dev:
+    build: .
+    volumes:
+      - .:/gem
+      - bundle_cache:/usr/local/bundle
+    environment:
+      - OVH_SMS_ACCOUNT=${OVH_SMS_ACCOUNT}
+      - OVH_SMS_LOGIN=${OVH_SMS_LOGIN}
+      - OVH_SMS_PASSWORD=${OVH_SMS_PASSWORD}
+    stdin_open: true
+    tty: true
+
+  test:
+    build: .
+    volumes:
+      - .:/gem
+      - bundle_cache:/usr/local/bundle
+    command: bundle exec rspec
+
+  lint:
+    build: .
+    volumes:
+      - .:/gem
+      - bundle_cache:/usr/local/bundle
+    command: bundle exec rubocop
+
+volumes:
+  bundle_cache:
