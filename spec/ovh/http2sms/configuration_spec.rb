@@ -132,4 +132,74 @@ RSpec.describe Ovh::Http2sms::Configuration do
       expect(new_config.raise_on_length_error).to be false
     end
   end
+
+  describe "callbacks" do
+    describe "#before_request" do
+      it "registers a callback" do
+        callback = proc { |_params| }
+        config.before_request(&callback)
+        expect(config.before_request_callbacks).to include(callback)
+      end
+
+      it "allows multiple callbacks" do
+        callback1 = proc { |_params| }
+        callback2 = proc { |_params| }
+        config.before_request(&callback1)
+        config.before_request(&callback2)
+        expect(config.before_request_callbacks.size).to eq(2)
+      end
+    end
+
+    describe "#after_request" do
+      it "registers a callback" do
+        callback = proc { |_response| }
+        config.after_request(&callback)
+        expect(config.after_request_callbacks).to include(callback)
+      end
+    end
+
+    describe "#on_success" do
+      it "registers a callback" do
+        callback = proc { |_response| }
+        config.on_success(&callback)
+        expect(config.on_success_callbacks).to include(callback)
+      end
+    end
+
+    describe "#on_failure" do
+      it "registers a callback" do
+        callback = proc { |_response| }
+        config.on_failure(&callback)
+        expect(config.on_failure_callbacks).to include(callback)
+      end
+    end
+
+    describe "#reset!" do
+      it "clears all callbacks" do
+        config.before_request { |params| params[:to] }
+        config.after_request(&:status)
+        config.on_success(&:status)
+        config.on_failure(&:status)
+
+        config.reset!
+
+        expect(config.before_request_callbacks).to be_empty
+        expect(config.after_request_callbacks).to be_empty
+        expect(config.on_success_callbacks).to be_empty
+        expect(config.on_failure_callbacks).to be_empty
+      end
+    end
+
+    describe "#dup" do
+      it "duplicates callbacks" do
+        callback = proc { |_| }
+        config.before_request(&callback)
+
+        duped = config.dup
+
+        expect(duped.before_request_callbacks).to include(callback)
+        expect(duped.before_request_callbacks).not_to be(config.before_request_callbacks)
+      end
+    end
+  end
 end

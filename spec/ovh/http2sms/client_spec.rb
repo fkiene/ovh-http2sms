@@ -246,5 +246,123 @@ RSpec.describe Ovh::Http2sms::Client do
         expect(logger).to have_received(:debug).with(/Response:.*success=true/)
       end
     end
+
+    context "with callbacks" do
+      describe "before_request" do
+        it "calls before_request callbacks with filtered params" do
+          stub_successful_response
+          received_params = nil
+
+          Ovh::Http2sms.configure do |c|
+            c.before_request { |params| received_params = params }
+          end
+
+          client.deliver(to: "33601020304", message: "Hello!")
+
+          expect(received_params[:to]).to eq("0033601020304")
+          expect(received_params[:message]).to eq("Hello!")
+          expect(received_params[:password]).to eq("[FILTERED]")
+        end
+
+        it "calls multiple before_request callbacks" do
+          stub_successful_response
+          call_count = 0
+
+          Ovh::Http2sms.configure do |c|
+            c.before_request { |_| call_count += 1 }
+            c.before_request { |_| call_count += 1 }
+          end
+
+          client.deliver(to: "33601020304", message: "Hello!")
+
+          expect(call_count).to eq(2)
+        end
+      end
+
+      describe "after_request" do
+        it "calls after_request callbacks with response" do
+          stub_successful_response
+          received_response = nil
+
+          Ovh::Http2sms.configure do |c|
+            c.after_request { |response| received_response = response }
+          end
+
+          client.deliver(to: "33601020304", message: "Hello!")
+
+          expect(received_response).to be_a(Ovh::Http2sms::Response)
+          expect(received_response.success?).to be true
+        end
+      end
+
+      describe "on_success" do
+        it "calls on_success callbacks on successful delivery" do
+          stub_successful_response
+          success_called = false
+
+          Ovh::Http2sms.configure do |c|
+            c.on_success { |_| success_called = true }
+          end
+
+          client.deliver(to: "33601020304", message: "Hello!")
+
+          expect(success_called).to be true
+        end
+
+        it "does not call on_success on failed delivery" do
+          stub_error_response(status: 201, message: "Error")
+          success_called = false
+
+          Ovh::Http2sms.configure do |c|
+            c.on_success { |_| success_called = true }
+          end
+
+          begin
+            client.deliver(to: "33601020304", message: "Hello!")
+          rescue Ovh::Http2sms::MissingParameterError
+            # expected
+          end
+
+          expect(success_called).to be false
+        end
+      end
+
+      describe "on_failure" do
+        it "calls on_failure callbacks on failed delivery" do
+          stub_error_response(status: 201, message: "Error")
+          failure_called = false
+          received_response = nil
+
+          Ovh::Http2sms.configure do |c|
+            c.on_failure do |response|
+              failure_called = true
+              received_response = response
+            end
+          end
+
+          begin
+            client.deliver(to: "33601020304", message: "Hello!")
+          rescue Ovh::Http2sms::MissingParameterError
+            # expected
+          end
+
+          expect(failure_called).to be true
+          expect(received_response.failure?).to be true
+        end
+
+        it "does not call on_failure on successful delivery" do
+          stub_successful_response
+          failure_called = false
+
+          Ovh::Http2sms.configure do |c|
+            c.on_failure { |_| failure_called = true }
+          end
+
+          client.deliver(to: "33601020304", message: "Hello!")
+
+          expect(failure_called).to be false
+        end
+      end
+    end
   end
 end
