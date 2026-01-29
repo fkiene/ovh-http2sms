@@ -125,6 +125,36 @@ Ovh::Http2sms.configure do |config|
 end
 ```
 
+### Callbacks
+
+Register callbacks for monitoring, logging, or metrics collection:
+
+```ruby
+Ovh::Http2sms.configure do |config|
+  # Called before each request (params have password filtered)
+  config.before_request do |params|
+    Rails.logger.info("Sending SMS to #{params[:to]}")
+  end
+
+  # Called after each request
+  config.after_request do |response|
+    StatsD.histogram("sms.duration", response_time)
+  end
+
+  # Called on successful delivery
+  config.on_success do |response|
+    StatsD.increment("sms.success")
+    StatsD.gauge("sms.credits", response.credits_remaining)
+  end
+
+  # Called on failed delivery
+  config.on_failure do |response|
+    StatsD.increment("sms.failure", tags: ["error:#{response.error_type}"])
+    Sentry.capture_message("SMS delivery failed: #{response.error_message}")
+  end
+end
+```
+
 ## Usage Examples
 
 ### Basic Send
