@@ -192,5 +192,19 @@ RSpec.describe Ovh::Http2sms::Validators do
 
       expect { described_class.validate_message!(very_long_message) }.not_to raise_error
     end
+
+    it "logs warning for very long messages when raise_on_length_error is false" do
+      logger = instance_double(Logger)
+      allow(logger).to receive(:warn)
+      Ovh::Http2sms.configure do |c|
+        c.logger = logger
+        c.raise_on_length_error = false
+      end
+      very_long_message = "A" * 2000
+
+      described_class.validate_message!(very_long_message)
+
+      expect(logger).to have_received(:warn).with(/SMS segments/)
+    end
   end
 end

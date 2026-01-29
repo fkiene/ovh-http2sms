@@ -189,6 +189,21 @@ RSpec.describe Ovh::Http2sms::Response do
         expect(response.error_message).to eq("Empty response")
       end
 
+      it "handles invalid credits value" do
+        response = described_class.parse("OK\ninvalid\n123", content_type: "text/plain")
+
+        expect(response.success?).to be true
+        expect(response.credits_remaining).to be_nil
+      end
+
+      it "extracts status code from error message" do
+        response = described_class.parse("KO\n201 Missing parameter", content_type: "text/plain")
+
+        expect(response.failure?).to be true
+        expect(response.status).to eq(201)
+        expect(response.error_message).to eq("Missing parameter")
+      end
+
       it "raises ResponseParseError for malformed JSON" do
         expect do
           described_class.parse("not json", content_type: "application/json")

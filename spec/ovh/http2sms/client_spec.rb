@@ -141,6 +141,14 @@ RSpec.describe Ovh::Http2sms::Client do
         end.to raise_error(Ovh::Http2sms::AuthenticationError, /IP not authorized/)
       end
 
+      it "raises AuthenticationError with default message when no error message provided" do
+        stub_error_response(status: 401)
+
+        expect do
+          client.deliver(to: "33601020304", message: "Hello!")
+        end.to raise_error(Ovh::Http2sms::AuthenticationError, /IP not authorized/)
+      end
+
       it "raises MissingParameterError for status 201" do
         stub_error_response(status: 201, message: "Missing message")
 

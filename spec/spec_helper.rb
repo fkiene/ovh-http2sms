@@ -50,11 +50,13 @@ def stub_successful_response(sms_id: "123456789", credits: "1987")
 end
 
 # Helper to stub error API response
-def stub_error_response(status:, message:)
+def stub_error_response(status:, message: nil)
+  body = { status: status }
+  body[:message] = message if message
   stub_request(:get, /ovh\.com.*http2sms\.cgi/)
     .to_return(
       status: 200,
-      body: { status: status, message: message }.to_json,
+      body: body.to_json,
       headers: { "Content-Type" => "application/json" }
     )
 end
