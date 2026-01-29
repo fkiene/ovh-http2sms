@@ -46,3 +46,8 @@ RSpec/ExampleLength:
 
 RSpec/NestedGroups:
   Max: 4
+
+# Disabled due to RuboCop bug causing internal errors
+# https://github.com/rubocop/rubocop/issues
+Capybara/RSpec/PredicateMatcher:
+  Enabled: false
