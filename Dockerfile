@@ -1,7 +1,7 @@
-FROM ruby:3.2-slim
+FROM ruby:3.3.14-slim-bookworm
 
 RUN apt-get update -qq && apt-get install -y \
-    build-essential \
+    build-essential libssl-dev libffi-dev zlib1g-dev libgmp-dev \
     git \
     libyaml-dev \
     && rm -rf /var/lib/apt/lists/*
